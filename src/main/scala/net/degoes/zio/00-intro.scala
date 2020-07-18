@@ -40,17 +40,17 @@ object ZIOModel {
    * Implement all missing methods on the ZIO companion object.
    */
   object ZIO {
-    def succeed[A](a: => A): ZIO[Any, Nothing, A] = ???
+    def succeed[A](a: => A): ZIO[Any, Nothing, A] = ZIO(_ => Right(a))
 
-    def fail[E](e: => E): ZIO[Any, E, Nothing] = ???
+    def fail[E](e: => E): ZIO[Any, E, Nothing] = ZIO(_ => Left(e))
 
-    def effect[A](sideEffect: => A): ZIO[Any, Throwable, A] = ???
+    def effect[A](sideEffect: => A): ZIO[Any, Throwable, A] = ZIO (_ => try { Right(sideEffect) } catch { case e => Left(e)})
 
-    def environment[R]: ZIO[R, Nothing, R] = ???
+    def environment[R]: ZIO[R, Nothing, R] = ZIO(r => Right(r))
 
-    def access[R, A](f: R => A): ZIO[R, Nothing, A] = ???
+    def access[R, A](f: R => A): ZIO[R, Nothing, A] = ZIO(r => Right(f(r)))
 
-    def accessM[R, E, A](f: R => ZIO[R, E, A]): ZIO[R, E, A] = ???
+    def accessM[R, E, A](f: R => ZIO[R, E, A]): ZIO[R, E, A] = ZIO(r => f(r).run(r))
   }
 
   /**
