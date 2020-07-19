@@ -59,18 +59,29 @@ object ZIOModel {
    * Implement all missing methods on the ZIO class.
    */
   final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
-    def map[B](f: A => B): ZIO[R, E, B] = ???
+    def map[B](f: A => B): ZIO[R, E, B] = ZIO(r => run(r).map(f))
 
     def flatMap[R1 <: R, E1 >: E, B](f: A => ZIO[R1, E1, B]): ZIO[R1, E1, B] =
-      ???
+      ZIO(r => self.run(r).flatMap(a => f(a).run(r)))
 
     def zip[R1 <: R, E1 >: E, B](that: ZIO[R1, E1, B]): ZIO[R1, E1, (A, B)] =
-      ???
+      self.flatMap(a => that.map(b => (a,b)))
 
-    def either: ZIO[R, Nothing, Either[E, A]] = ???
+    def zip2[R1 <: R, E1 >: E, B](that: ZIO[R1, E1, B]): ZIO[R1, E1, (A, B)] =
+      for {
+        a <- self
+        b <- that
+      } yield (a,b)
 
-    def provide(r: R): ZIO[Any, E, A] = ???
+    def either: ZIO[R, Nothing, Either[E, A]] = ZIO(r => Right(self.run(r)))
+    def either2: ZIO[R, Nothing, Either[E, A]] = ZIO.access(r => self.run(r))
 
+    def provide(r: R): ZIO[Any, E, A] = ZIO(_ => self.run(r))
+
+    /**
+     * Translates effect failure into death of the fiber, making all failures unchecked and
+     * not a part of the type of the effect.
+     */
     def orDie(implicit ev: E <:< Throwable): ZIO[R, Nothing, A] =
       ZIO(r => self.run(r).fold(throw _, Right(_)))
   }
