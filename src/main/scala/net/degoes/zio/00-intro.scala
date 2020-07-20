@@ -134,7 +134,7 @@ object SuccessEffect extends App {
    * `ExitCode`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    ZIO.succeed(ExitCode.success)
 }
 
 object HelloWorld extends App {
@@ -148,7 +148,10 @@ object HelloWorld extends App {
    * effect into another one that produces an exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    //putStrLn("Hello world") *> ZIO.succeed(ExitCode.success)
+  for {
+    _ <- putStrLn("Hello World")
+  } yield ExitCode.success
 }
 
 object SimpleMap extends App {
@@ -164,7 +167,7 @@ object SimpleMap extends App {
    * into a constant exit code by using `ZIO#as`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    readLine.map(_.length).as(ExitCode.success)
 }
 
 object PrintSequenceZip extends App {
@@ -177,7 +180,8 @@ object PrintSequenceZip extends App {
    * that prints three lines of text to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    //putStrLn("Line 1").zip(putStrLn("Line 2")).zip(putStrLn("Line 3")).as(ExitCode.success)
+    putStrLn("Line 1").zip(putStrLn("Line 2")).zip(putStrLn("Line 3")) *> ZIO.succeed(ExitCode.success)
 }
 
 object PrintSequence extends App {
@@ -190,7 +194,7 @@ object PrintSequence extends App {
    * produce an effect that prints three lines of text to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn("Line 1") *> putStrLn("Line 2") *> putStrLn("Line 3") *> ZIO.succeed(ExitCode.success)
 }
 
 object PrintReadSequence extends App {
@@ -206,7 +210,7 @@ object PrintReadSequence extends App {
    * effect, which models reading a line of text from the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn("Hit Enter to exit...") *> readLine *> ZIO.succeed(ExitCode.success)
 }
 
 object SimpleDuplication extends App {
@@ -220,13 +224,14 @@ object SimpleDuplication extends App {
    * value that stores the expression, and then referencing that variable
    * three times.
    */
-  def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    // val effect = ???
+  def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
+    val effect = putStrLn("Hello again")
     putStrLn("Hello") *>
-      putStrLn("Hello again") *>
-      putStrLn("Hello again") *>
-      putStrLn("Hello again") *>
+      effect *>
+      effect *>
+      effect *>
       ZIO.succeed(ExitCode.success)
+  }
 }
 
 object FlatMap extends App {
@@ -249,9 +254,7 @@ object FlatMap extends App {
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     putStrLn("What is your name?") *>
-      readLine *> // Use .flatMap(...) here
-      putStrLn("Your name is: ") *>
-      ZIO.succeed(ExitCode.success)
+      readLine.flatMap { name => putStrLn(s"Your name is: $name")} *>  ZIO.succeed(ExitCode.success)
 }
 
 object PromptName extends App {
@@ -268,9 +271,10 @@ object PromptName extends App {
    * success value of the left hand effect.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    putStrLn("What is your name?") *>
-      readLine.flatMap(name => putStrLn(s"Your name is: ${name}")) *>
-      ZIO.succeed(ExitCode.success)
+    putStrLn("What is your name?").flatMap ( _ =>
+      readLine.flatMap(name =>
+        putStrLn(s"Your name is: ${name}").flatMap( _ =>
+          ZIO.succeed(ExitCode.success))))
 
   /**
    * EXERCISE
@@ -283,7 +287,7 @@ object PromptName extends App {
     left: ZIO[R, E, A],
     right: ZIO[R, E, B]
   ): ZIO[R, E, B] =
-    ???
+    left.flatMap(_ => right)
 }
 
 object ForComprehension extends App {
@@ -299,9 +303,11 @@ object ForComprehension extends App {
    * except for the final line, which will be translated into a `map`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    putStrLn("What is your name?").flatMap(
-      _ => readLine.flatMap(name => putStrLn(s"Your name is: ${name}").map(_ => ExitCode.success))
-    )
+    for {
+      _    <- putStrLn("What is your name?")
+      name <- readLine
+      _    <- putStrLn(s"Your name is: ${name}")
+    } yield ExitCode.success
 }
 
 object ForComprehensionBackward extends App {
