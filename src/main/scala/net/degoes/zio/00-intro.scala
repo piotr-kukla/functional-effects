@@ -323,13 +323,19 @@ object ForComprehensionBackward extends App {
    * comprehension will translate to a `flatMap`, except the final line,
    * which will translate to a `map`.
    */
+//  def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
+//    for {
+//      _   <- putStrLn("How old are you?")
+//      age <- readInt
+//      _ <- if (age < 18) putStrLn("You are a kid!")
+//          else putStrLn("You are all grown up!")
+//    } yield ExitCode.success
+
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    for {
-      _   <- putStrLn("How old are you?")
-      age <- readInt
-      _ <- if (age < 18) putStrLn("You are a kid!")
-          else putStrLn("You are all grown up!")
-    } yield ExitCode.success
+    putStrLn("How old are you?").flatMap(_ =>
+      readInt.flatMap(age =>
+        (if (age < 18) putStrLn("You are a kid!") else putStrLn("You are all grown up")).map(_ =>
+          ExitCode.success)))
 }
 
 object NumberGuesser extends App {
@@ -350,7 +356,12 @@ object NumberGuesser extends App {
    * above.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      random <- nextIntBetween(0, 3)
+      _      <- putStrLn("Guess the number:")
+      guess  <- getStrLn
+      _      <- analyzeAnswer(random, guess)
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object SingleSideEffect extends App {
