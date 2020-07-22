@@ -372,7 +372,7 @@ object SingleSideEffect extends App {
    * Using ZIO.effect, convert the side-effecting of `println` into a pure
    * functional effect.
    */
-  def myPrintLn(line: String): Task[Unit] = ???
+  def myPrintLn(line: String): Task[Unit] = ZIO.effect(println(line))
 
   def run(args: List[String]) =
     myPrintLn("Hello World!").exitCode
@@ -385,7 +385,7 @@ object MultipleSideEffects extends App {
    * into a functional effect, which describes the action of printing a line
    * of text to the console, but which does not actually perform the print.
    */
-  def putStrLn(line: String): Task[Unit] = ???
+  def putStrLn(line: String): Task[Unit] = ZIO.effect(println(line))
 
   /**
    * Using `ZIO.effect`, wrap Scala's `scala.io.StdIn.readLine()` method to
@@ -393,7 +393,7 @@ object MultipleSideEffects extends App {
    * of printing a line of text to the console, but which does not actually
    * perform the print.
    */
-  val getStrLn: Task[String] = ???
+  val getStrLn: Task[String] = ZIO.effect(scala.io.StdIn.readLine())
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     (for {
