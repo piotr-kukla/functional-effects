@@ -28,7 +28,7 @@ object ErrorConstructor extends App {
    * string value, such as "Uh oh!". Explain the type signature of the
    * effect.
    */
-  val failed: ZIO[Any, String, Nothing] = ???
+  val failed: ZIO[Any, String, Nothing] = ZIO.fail("Uh oh!")
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     failed.foldM(putStrLn(_), putStrLn(_)) as ExitCode.success
@@ -46,7 +46,7 @@ object ErrorRecoveryOrElse extends App {
    * effect with another effect that succeeds with a success exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed orElse ZIO.succeed(ExitCode.success)
 }
 
 object ErrorShortCircuit extends App {
