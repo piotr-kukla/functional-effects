@@ -65,7 +65,7 @@ object ErrorShortCircuit extends App {
    * succeeds with an exit code (created with `ZIO.succeed`).
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (failed as ExitCode.failure) orElse ZIO.succeed(ExitCode.success)
 }
 
 object ErrorRecoveryFold extends App {
@@ -80,7 +80,7 @@ object ErrorRecoveryFold extends App {
    * exit codes.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.fold(_ => ExitCode.failure, _ => ExitCode.success)
 }
 
 object ErrorRecoveryCatchAll extends App {
@@ -95,7 +95,8 @@ object ErrorRecoveryCatchAll extends App {
    * the console using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    //failed.catchAll(msg => putStrLn(msg) *> ZIO.succeed(ExitCode.success))
+    failed.catchAll(msg => putStrLn(msg).as(ExitCode.success))
 }
 
 object ErrorRecoveryFoldM extends App {
@@ -110,7 +111,7 @@ object ErrorRecoveryFoldM extends App {
    * by using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.foldM(putStrLn(_), putStrLn(_)) as ExitCode.success
 }
 
 object ErrorRecoveryEither extends App {
@@ -125,7 +126,8 @@ object ErrorRecoveryEither extends App {
    * channel, and then map the `Either[String, Int]` into an exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    //failed.either.map(_ => ExitCode.success)
+    failed.either as ExitCode.success
 }
 
 object ErrorRecoveryIgnore extends App {
@@ -140,7 +142,7 @@ object ErrorRecoveryIgnore extends App {
    * the resulting unit into a successful exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.ignore as ExitCode.success
 }
 
 object ErrorNarrowing extends App {
