@@ -157,7 +157,7 @@ object ErrorNarrowing extends App {
    * Using `ZIO#refineToOrDie`, narrow the error type of `broadReadLine` into
    * an `IOException`:
    */
-  val myReadLine: IO[IOException, String] = ???
+  val myReadLine: IO[IOException, String] = broadReadLine.refineOrDie{ case e => new IOException(e)}
 
   def myPrintLn(line: String): UIO[Unit] = UIO(println(line))
 
@@ -184,10 +184,10 @@ object AlarmApp extends App {
    */
   lazy val getAlarmDuration: ZIO[Console, IOException, Duration] = {
     def parseDuration(input: String): IO[NumberFormatException, Duration] =
-      ???
+      ZIO.effect(input.toLong).map(Duration(_, TimeUnit.SECONDS)).refineOrDie{ case e: NumberFormatException => e}
 
     def fallback(input: String): ZIO[Console, IOException, Duration] =
-      ???
+      getAlarmDuration
 
     for {
       _        <- putStrLn("Please enter the number of seconds to sleep: ")
@@ -204,7 +204,11 @@ object AlarmApp extends App {
    * prints out a wakeup alarm message, like "Time to wakeup!!!".
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      d <- getAlarmDuration
+      _ <- ZIO.sleep(d)
+      _ <- putStrLn("Time to wakeup")
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object SequentialCause extends App {
