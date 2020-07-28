@@ -223,7 +223,7 @@ object SequentialCause extends App {
    * Using `Cause.++`, form a sequential cause by composing `failed1`
    * and `failed2`.
    */
-  lazy val composed = ???
+  lazy val composed = failed1 ++ failed2
 
   /**
    * EXERCISE
@@ -231,7 +231,7 @@ object SequentialCause extends App {
    * Using `Cause.prettyPrint`, dump out `composed` to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn(composed.prettyPrint) as ExitCode.success
 }
 
 object ParalellCause extends App {
@@ -246,7 +246,7 @@ object ParalellCause extends App {
    * Using `Cause.&&`, form a parallel cause by composing `failed1`
    * and `failed2`.
    */
-  lazy val composed = ???
+  lazy val composed = failed1 && failed2
 
   /**
    * EXERCISE
@@ -254,18 +254,18 @@ object ParalellCause extends App {
    * Using `Cause.prettyPrint`, dump out `composed` to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn(composed.prettyPrint) as ExitCode.success
 }
 
 object Sandbox extends App {
   import zio.console._
 
-  val failed1    = ZIO.fail("Uh oh 1")
+  val failed1: IO[String, Nothing] = ZIO.fail("Uh oh 1")
   val failed2    = ZIO.fail("Uh oh 2")
-  val finalizer1 = ZIO.fail(new Exception("Finalizing 1!")).orDie
+  val finalizer1: URIO[Any, Nothing] = ZIO.fail(new Exception("Finalizing 1!")).orDie
   val finalizer2 = ZIO.fail(new Exception("Finalizing 2!")).orDie
 
-  val composed = ZIO.uninterruptible {
+  val composed: ZIO[Any, String, (Nothing, Nothing)] = ZIO.uninterruptible {
     (failed1 ensuring finalizer1) zipPar (failed2 ensuring finalizer2)
   }
 
@@ -276,5 +276,5 @@ object Sandbox extends App {
    * resulting `Cause` value to the console using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    composed.sandbox.foldM(cause => putStrLn(cause.prettyPrint), result => putStrLn(result._1)) as ExitCode.success
 }
