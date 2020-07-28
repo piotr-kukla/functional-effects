@@ -113,7 +113,11 @@ object InterviewForeach extends App {
    * out the contents of the collection.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      answers <- ZIO.foreach(questions)(q => putStrLn(q) *> getStrLn)
+      _       <- putStrLn("Your answers: ")
+      _       <- putStrLn(answers.mkString("\n"))
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object WhileLoop extends App {
