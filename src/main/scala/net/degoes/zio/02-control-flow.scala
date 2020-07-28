@@ -41,8 +41,12 @@ object Interview extends App {
    */
   def getAllAnswers(questions: List[String]): ZIO[Console, IOException, List[String]] =
     questions match {
-      case Nil     => ???
-      case q :: qs => ???
+      case Nil     => ZIO.succeed(List())
+      case q :: qs => for {
+        _ <- putStrLn(q)
+        answer <- getStrLn
+        answers <- getAllAnswers(qs)
+      } yield answer::answers
     }
 
   /**
@@ -52,7 +56,11 @@ object Interview extends App {
    * `questions`, to ask the user a bunch of questions, and print the answers.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      answers <- getAllAnswers(questions)
+      _       <- putStrLn("Your answers: ")
+      _       <- putStrLn(answers.mkString("\n"))
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object InterviewGeneric extends App {
@@ -72,12 +80,19 @@ object InterviewGeneric extends App {
    */
   def iterateAndCollect[R, E, A, B](as: List[A])(f: A => ZIO[R, E, B]): ZIO[R, E, List[B]] =
     as match {
-      case Nil     => ???
-      case a :: as => ???
+      case Nil     => ZIO.succeed(Nil)
+      case a :: as => for {
+        b  <- f(a)
+        bs <- iterateAndCollect(as)(f)
+      } yield b :: bs
     }
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      answers <- iterateAndCollect(questions)(q => putStrLn(q) *> getStrLn)
+      _       <- putStrLn("Your answers: ")
+      _       <- putStrLn(answers.mkString("\n"))
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object InterviewForeach extends App {
