@@ -14,7 +14,10 @@ object Looping extends App {
    */
   def repeat[R, E, A](n: Int)(effect: ZIO[R, E, A]): ZIO[R, E, Chunk[A]] =
     if (n == 0) ZIO.succeed(Chunk.empty)
-    else effect.flatMap( _ => repeat(n-1)(effect))
+    else for {
+        a <- effect
+        chunkA <- repeat(n-1)(effect)
+      } yield Chunk(a) ++ chunkA
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     repeat(100)(putStrLn("All work and no play makes Jack a dull boy")).exitCode
