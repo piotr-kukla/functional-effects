@@ -129,11 +129,24 @@ object WhileLoop extends App {
    * Implement the functional effect version of a while loop.
    */
   def whileLoop[R, E, A](cond: UIO[Boolean])(zio: ZIO[R, E, A]): ZIO[R, E, Chunk[A]] =
-    ???
+    cond.flatMap(condV => {
+      if (condV) for {
+        a <- zio
+        as <- whileLoop(cond)(zio)
+       } yield Chunk(a) ++ as
+      else ZIO.succeed(Chunk.empty)
+    })
+
+  def whileLoop2[R, E, A](cond: UIO[Boolean])(zio: ZIO[R, E, A]): ZIO[R, E, Chunk[A]] =
+    cond.flatMap(condV => {
+      if (condV) ((zio zipWith whileLoop2(cond)(zio)){ case (a, as) => Chunk(a) ++ as})
+      else ZIO.succeed(Chunk.empty)
+    })
+
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
     def loop(variable: Ref[Int]) =
-      whileLoop(variable.get.map(_ < 100)) {
+      whileLoop2(variable.get.map(_ < 100)) {
         for {
           value <- variable.get
           _     <- putStrLn(s"At iteration: ${value}")
