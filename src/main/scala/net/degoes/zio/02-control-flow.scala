@@ -171,7 +171,8 @@ object Iterate extends App {
    * evaluates to false, returning the "last" value of type `A`.
    */
   def iterate[R, E, A](start: A)(cond: A => Boolean)(f: A => ZIO[R, E, A]): ZIO[R, E, A] =
-    ???
+    if (!cond(start)) ZIO.succeed(start)
+    else f(start).flatMap(a => iterate(a)(cond)(f))
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     iterate(0)(_ < 100) { i =>
