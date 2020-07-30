@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.io.Source
+
 object Cat extends App {
   import zio.console._
   import zio.blocking._
@@ -18,7 +20,7 @@ object Cat extends App {
    * blocking thread pool, storing the result into a string.
    */
   def readFile(file: String): ZIO[Blocking, IOException, String] =
-    ???
+    effectBlockingIO(Source.fromFile(file).getLines().mkString("\n"))
 
   /**
    * EXERCISE
@@ -27,7 +29,10 @@ object Cat extends App {
    * contents of the specified file to standard output.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      content <- readFile("build.sbt")
+      _ <- putStrLn(content)
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object CatBracket extends App {
@@ -37,7 +42,7 @@ object CatBracket extends App {
   import scala.io.Source
 
   def open(file: String): ZIO[Blocking, IOException, Source] =
-    effectBlockingIO(scala.io.Source.fromFile(file))
+    effectBlockingIO(Source.fromFile(file))
 
   def close(source: Source): ZIO[Blocking, IOException, Unit] =
     effectBlockingIO(source.close())
