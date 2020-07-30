@@ -54,7 +54,8 @@ object CatBracket extends App {
    * fail to close the file, no matter what happens during reading.
    */
   def readFile(file: String): ZIO[Blocking, IOException, String] =
-    ???
+    open(file).bracket(source => close(source).orDie, source => ZIO.succeed(source.getLines().mkString("\n")))
+
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     (for {
