@@ -97,7 +97,7 @@ object SourceManaged extends App {
       val close: ZSource => ZIO[Blocking, Nothing, Unit] =
         _.execute(_.close()).orDie
 
-      ???
+      ZManaged.make(open)(close)
     }
   }
 
@@ -110,7 +110,8 @@ object SourceManaged extends App {
    */
   def readFiles(
     files: List[String]
-  ): ZIO[Blocking with Console, IOException, List[String]] = ???
+  ): ZIO[Blocking with Console, IOException, List[String]] =
+    ZManaged.foreachPar(files)(ZSource.make(_)).use(ZIO.foreach(_)(_.execute(_.getLines().mkString("\n"))))
 
   /**
    * EXERCISE
@@ -121,7 +122,11 @@ object SourceManaged extends App {
    * anything except an error message.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      files    <- ZIO.succeed(args)
+      contents <- readFiles(files)
+      _        <- putStrLn(contents.mkString("\n"))
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object CatIncremental extends App {

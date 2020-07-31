@@ -150,7 +150,7 @@ object HelloWorld extends App {
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     //putStrLn("Hello world") *> ZIO.succeed(ExitCode.success)
   for {
-    _ <- putStrLn("Hello World")
+    _ <- putStrLn("Hello World!")
   } yield ExitCode.success
 }
 
