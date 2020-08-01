@@ -5,7 +5,7 @@ import zio._
 object ForkJoin extends App {
   import zio.console._
 
-  val printer =
+  val printer: ZIO[Console, Nothing, Int] =
     putStrLn(".").repeat(Schedule.recurs(10))
 
   /**
@@ -16,7 +16,12 @@ object ForkJoin extends App {
    * and finally, print out a message "Joined".
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    printer.exitCode
+    for  {
+      fiber <- printer.fork
+      _     <- putStrLn("Forked")
+      _     <- fiber.join
+      _     <- putStrLn("Joined")
+    } yield ExitCode.success
 }
 
 object ForkInterrupt extends App {
