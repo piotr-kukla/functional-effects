@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
+import net.degoes.zio.SourceManaged.ZSource
+
 import scala.io.Source
 
 object Cat extends App {
@@ -155,6 +157,9 @@ object CatIncremental extends App {
   object FileHandle {
     final def open(file: String): ZIO[Blocking, IOException, FileHandle] =
       effectBlockingIO(new FileHandle(new FileInputStream(file)))
+
+    def make(file: String): ZManaged[Blocking, IOException, FileHandle] =
+      ZManaged.make(open(file))(_.close.orDie)
   }
 
   /**
@@ -164,7 +169,13 @@ object CatIncremental extends App {
    * a time, stopping when there are no more chunks left.
    */
   def cat(fh: FileHandle): ZIO[Blocking with Console, IOException, Unit] =
-    ???
+    for {
+      optChunk <- fh.read
+      _        <- optChunk match {
+                case Some(cb) => putStrLn(new String(cb.toArray)) *> cat(fh)
+                case None => ZIO.succeed(())
+              }
+    } yield ()
 
   /**
    * EXERCISE
@@ -182,7 +193,7 @@ object CatIncremental extends App {
          * Open the specified file, safely create and use a file handle to
          * incrementally dump the contents of the file to standard output.
          */
-        ???
+        FileHandle.make(args.head).use(cat(_)).as(ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 
       case _ => putStrLn("Usage: cat <file>") as ExitCode(2)
     }
