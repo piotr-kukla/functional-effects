@@ -40,7 +40,13 @@ object ForkInterrupt extends App {
    * finally, print out a message "Interrupted".
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    (infinitePrinter *> ZIO.sleep(10.millis)).exitCode
+    for {
+      fiber <- infinitePrinter.fork
+      _     <- putStrLn("Forked")
+      _     <- ZIO.sleep(100.millis)
+      _     <- fiber.interrupt
+      _     <- putStrLn("Interrupted")
+    } yield ExitCode.success
 }
 
 object ParallelFib extends App {
