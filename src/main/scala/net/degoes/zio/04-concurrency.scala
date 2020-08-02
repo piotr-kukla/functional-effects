@@ -62,7 +62,7 @@ object ParallelFib extends App {
       if (n <= 1) UIO(n)
       else
         UIO.effectSuspendTotal {
-          (loop(n - 1, original) zipWith loop(n - 2, original))(_ + _)
+          (loop(n - 1, original) zipWithPar loop(n - 2, original))(_ + _)
         }
 
     loop(n, n)
@@ -111,7 +111,13 @@ object AlarmAppImproved extends App {
    * prints out a wakeup alarm message, like "Time to wakeup!!!".
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      duration <- getAlarmDuration
+      fiber    <- (putStr(".") *> ZIO.sleep(1 second)).forever.fork
+      _        <- ZIO.sleep(duration)
+      _        <- fiber.interrupt
+      _        <- putStrLn("Time to wakeup!!!")
+    } yield ExitCode.success) orElse ZIO.succeed(ExitCode.failure)
 }
 
 object ComputePi extends App {
