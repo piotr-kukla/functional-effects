@@ -155,6 +155,17 @@ object ComputePi extends App {
   val randomPoint: ZIO[Random, Nothing, (Double, Double)] =
     nextDouble zip nextDouble
 
+  def oneEstimation(piState: PiState): ZIO[Console with Random, Nothing, Unit] =
+    for {
+      rp <- randomPoint
+      _  <- piState.total.update(_ + 1)
+      _  <- if (insideCircle(rp._1, rp._2)) piState.inside.update(_ + 1) else ZIO.succeed(())
+      inside <- piState.inside.get
+      total <- piState.total.get
+      fiberId <- ZIO.fiberId
+      _  <- putStrLn(s"Estimate PI: ${estimatePi(inside, total)} on fiberId: $fiberId")
+    } yield ()
+
   /**
    * EXERCISE
    *
@@ -162,7 +173,16 @@ object ComputePi extends App {
    * ongoing estimates continuously until the estimation is complete.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    for {
+      inside <- Ref.make(0L)
+      total  <- Ref.make(0L)
+      piState = PiState(inside, total)
+      fiber1 <- oneEstimation(piState).forever.fork
+      fiber2 <- oneEstimation(piState).forever.fork
+      _      <- ZIO.sleep(100 milliseconds)
+      _      <- fiber1.interrupt
+      _      <- fiber2.interrupt
+    } yield ExitCode.success
 }
 
 object ParallelZip extends App {
