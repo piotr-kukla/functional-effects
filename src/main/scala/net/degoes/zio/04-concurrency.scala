@@ -160,10 +160,10 @@ object ComputePi extends App {
       rp <- randomPoint
       _  <- piState.total.update(_ + 1)
       _  <- if (insideCircle(rp._1, rp._2)) piState.inside.update(_ + 1) else ZIO.succeed(())
-      inside <- piState.inside.get
-      total <- piState.total.get
-      fiberId <- ZIO.fiberId
-      _  <- putStrLn(s"Estimate PI: ${estimatePi(inside, total)} on fiberId: $fiberId")
+//      inside <- piState.inside.get
+//      total <- piState.total.get
+//      fiberId <- ZIO.fiberId
+//      _  <- putStrLn(s"Estimate PI: ${estimatePi(inside, total)} on fiberId: $fiberId")
     } yield ()
 
   /**
@@ -174,14 +174,18 @@ object ComputePi extends App {
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     for {
-      inside <- Ref.make(0L)
-      total  <- Ref.make(0L)
-      piState = PiState(inside, total)
-      fiber1 <- oneEstimation(piState).forever.fork
-      fiber2 <- oneEstimation(piState).forever.fork
-      _      <- ZIO.sleep(100 milliseconds)
+      insideRef <- Ref.make(0L)
+      totalRef  <- Ref.make(0L)
+      piState = PiState(insideRef, totalRef)
+      worker = oneEstimation(piState).forever
+      workers = List.fill(3)(worker)
+      fiber1 <- ZIO.forkAll(workers)
+      //fiber2 <- (putStrLn(s"Estimate PI: ${estimatePi(insideRef.get, total)}))
+      _      <- ZIO.sleep(3 second)
       _      <- fiber1.interrupt
-      _      <- fiber2.interrupt
+      inside <- insideRef.get
+      total  <- totalRef.get
+      _      <- putStrLn(s"Estimate PI: ${estimatePi(inside, total)}")
     } yield ExitCode.success
 }
 
