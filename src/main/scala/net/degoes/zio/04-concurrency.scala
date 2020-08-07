@@ -270,6 +270,7 @@ object StmSwap extends App {
 object StmLock extends App {
   import zio.console._
   import zio.stm._
+  import zio.duration._
 
   /**
    * EXERCISE
@@ -278,22 +279,26 @@ object StmLock extends App {
    * acquisition, and release methods.
    */
   class Lock private (tref: TRef[Boolean]) {
-    def acquire: UIO[Unit] = ???
-    def release: UIO[Unit] = ???
+    def acquire: UIO[Unit] = STM.atomically(tref.get.retryUntil(_ == false) *> tref.set(true))
+    def release: UIO[Unit] = STM.atomically(tref.set(false))
   }
   object Lock {
-    def make: UIO[Lock] = ???
+    def make: UIO[Lock] = STM.atomically(
+      for {
+        ref <- TRef.make(false)
+      } yield new Lock(ref)
+    )
   }
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     for {
       lock <- Lock.make
       fiber1 <- lock.acquire
-                 .bracket_(lock.release)(putStrLn("Bob  : I have the lock!"))
+                 .bracket_(lock.release)(putStrLn("Bob  : I have the lock!") *> ZIO.sleep(1 second))
                  .repeat(Schedule.recurs(10))
                  .fork
       fiber2 <- lock.acquire
-                 .bracket_(lock.release)(putStrLn("Sarah: I have the lock!"))
+                 .bracket_(lock.release)(putStrLn("Sarah: I have the lock!") *> ZIO.sleep(1 second))
                  .repeat(Schedule.recurs(10))
                  .fork
       _ <- (fiber1 zip fiber2).join
