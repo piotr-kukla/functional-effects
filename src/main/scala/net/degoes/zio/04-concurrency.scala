@@ -316,11 +316,22 @@ object StmQueue extends App {
    * Using STM, implement a async queue with double back-pressuring.
    */
   class Queue[A] private (capacity: Int, queue: TRef[ScalaQueue[A]]) {
-    def take: UIO[A]           = ???
-    def offer(a: A): UIO[Unit] = ???
+    def take: UIO[A]           = STM.atomically(
+      for {
+        _            <- queue.get.retryUntil(!_.isEmpty)
+        (head, tail) <- queue.get.map(_.dequeue)
+        _            <- queue.set(tail)
+      } yield head
+
+    )
+    def offer(a: A): UIO[Unit] = STM.atomically(queue.get.retryUntil(_.size < capacity) *> queue.update(_.enqueue(a)))
   }
   object Queue {
-    def bounded[A](capacity: Int): UIO[Queue[A]] = ???
+    def bounded[A](capacity: Int): UIO[Queue[A]] = STM.atomically(
+      for {
+        queue <- TRef.make(ScalaQueue[A]())
+      } yield new Queue(capacity, queue)
+    )
   }
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
