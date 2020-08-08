@@ -347,6 +347,7 @@ object StmQueue extends App {
 object StmLunchTime extends App {
   import zio.console._
   import zio.stm._
+  import zio.duration._
 
   /**
    * EXERCISE
@@ -356,9 +357,9 @@ object StmLunchTime extends App {
   final case class Attendee(state: TRef[Attendee.State], name: String) {
     import Attendee.State._
 
-    def isStarving: STM[Nothing, Boolean] = ???
+    def isStarving: STM[Nothing, Boolean] = state.get.map(_ == Starving)
 
-    def feed: STM[Nothing, Unit] = ???
+    def feed: STM[Nothing, Unit] = state.set(Full)
   }
   object Attendee {
     sealed trait State
@@ -393,33 +394,42 @@ object StmLunchTime extends App {
    *
    * Using STM, implement a method that feeds a single attendee.
    */
-  def feedAttendee(t: Table, a: Attendee): STM[Nothing, Unit] =
+  def feedAttendee(t: Table, a: Attendee): STM[Nothing, Int] =
 
     for {
       index <- t.findEmptySeat.retryUntil(_.isDefined).map(_.get)
       //_     <- STM.succeed(println(s"${a.name}: taking place: $index"))
       _     <- t.takeSeat(index)
-      _     <- t.vacateSeat(index)
+      //_     <- t.vacateSeat(index)
       //_     <- STM.succeed(println(s"${a.name}: vacating place: $index"))
-    } yield ()
+    } yield index
 
   /**
    * EXERCISE
    *
    * Using STM, implement a method that feeds only the starving attendees.
    */
-  def feedStarving(table: Table, list: List[Attendee]): UIO[Unit] =
+  def feedStarving(table: Table, list: List[Attendee]): ZIO[Console with clock.Clock, Nothing, Unit] =
     //STM.foreach(list)(a => feedAttendee(table, a)).commit.as(())
-  UIO.foreachPar(list) (a => feedAttendee(table, a).commit).as(())
+  ZIO.foreachPar(list) (a =>
+    for {
+      _     <- putStrLn(s"${a.name}: getting into Restaurant")
+      index <- STM.atomically(feedAttendee(table, a))
+      _     <- putStrLn(s"${a.name}: eating at table: $index")
+      _     <- ZIO.sleep(2 seconds)
+      _     <- table.vacateSeat(index).commit
+      _     <- putStrLn(s"${a.name}: exit.")
+    } yield ()
+  ).as(())
 
 
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
-    val Attendees = 100
+    val Attendees = 15
     val TableSize = 5
 
     for {
-      attendees <- ZIO.foreach(0 to Attendees)(
+      attendees <- ZIO.foreach(1 to Attendees)(
                     i =>
                       TRef
                         .make[Attendee.State](Attendee.State.Starving)
@@ -431,6 +441,7 @@ object StmLunchTime extends App {
                 .map(Table(_))
                 .commit
       _ <- feedStarving(table, attendees)
+      //_    <- putStrLn(seatsIdx.mkString(","))
     } yield ExitCode.success
   }
 }
