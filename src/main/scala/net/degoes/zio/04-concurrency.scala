@@ -353,7 +353,7 @@ object StmLunchTime extends App {
    *
    * Using STM, implement the missing methods of Attendee.
    */
-  final case class Attendee(state: TRef[Attendee.State]) {
+  final case class Attendee(state: TRef[Attendee.State], name: String) {
     import Attendee.State._
 
     def isStarving: STM[Nothing, Boolean] = ???
@@ -383,9 +383,9 @@ object StmLunchTime extends App {
         }
         .map(_._2)
 
-    def takeSeat(index: Int): STM[Nothing, Unit] = ???
+    def takeSeat(index: Int): STM[Nothing, Unit] = seats.update(index, _ => true)
 
-    def vacateSeat(index: Int): STM[Nothing, Unit] = ???
+    def vacateSeat(index: Int): STM[Nothing, Unit] = seats.update(index, _ => false)
   }
 
   /**
@@ -393,7 +393,15 @@ object StmLunchTime extends App {
    *
    * Using STM, implement a method that feeds a single attendee.
    */
-  def feedAttendee(t: Table, a: Attendee): STM[Nothing, Unit] = ???
+  def feedAttendee(t: Table, a: Attendee): STM[Nothing, Unit] =
+
+    for {
+      index <- t.findEmptySeat.retryUntil(_.isDefined).map(_.get)
+      //_     <- STM.succeed(println(s"${a.name}: taking place: $index"))
+      _     <- t.takeSeat(index)
+      _     <- t.vacateSeat(index)
+      //_     <- STM.succeed(println(s"${a.name}: vacating place: $index"))
+    } yield ()
 
   /**
    * EXERCISE
@@ -401,7 +409,10 @@ object StmLunchTime extends App {
    * Using STM, implement a method that feeds only the starving attendees.
    */
   def feedStarving(table: Table, list: List[Attendee]): UIO[Unit] =
-    ???
+    //STM.foreach(list)(a => feedAttendee(table, a)).commit.as(())
+  UIO.foreachPar(list) (a => feedAttendee(table, a).commit).as(())
+
+
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
     val Attendees = 100
@@ -412,7 +423,7 @@ object StmLunchTime extends App {
                     i =>
                       TRef
                         .make[Attendee.State](Attendee.State.Starving)
-                        .map(Attendee(_))
+                        .map(state => Attendee(state, s"Smith${i}"))
                         .commit
                   )
       table <- TArray
