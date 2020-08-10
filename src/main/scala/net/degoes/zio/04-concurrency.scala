@@ -2,6 +2,8 @@ package net.degoes.zio
 
 import zio._
 
+import scala.math.min
+
 object ForkJoin extends App {
   import zio.console._
 
@@ -461,12 +463,32 @@ object StmPriorityQueue extends App {
     minLevel: TRef[Option[Int]],
     map: TMap[Int, TQueue[A]]
   ) {
-    def offer(a: A, priority: Int): STM[Nothing, Unit] = ???
+    def offer(a: A, priority: Int): STM[Nothing, Unit] =
+      for {
+        emptyQueue <- TQueue.unbounded[A]
+        queue <- map.getOrElse(priority, emptyQueue)
+        _     <- queue.offer(a)
+        _     <- minLevel.update {
+                  case None => Some(priority)
+                  case Some(oldMinLevel) => Some(min(priority, oldMinLevel))
+                }
+      } yield ()
 
-    def take: STM[Nothing, A] = ???
+    def take: STM[Nothing, A] = for {
+      minPrio <- minLevel.get.retryUntil(_.isDefined).map(_.get)
+      result <- for {
+                queue <- map.get(minPrio).map(_.get)
+                elem  <- queue.take
+            } yield elem
+      //TODO wyliczyc nowe minPrio (byc moze None gdy pusta kolejka)
+    } yield result
   }
   object PriorityQueue {
-    def make[A]: STM[Nothing, PriorityQueue[A]] = ???
+    def make[A]: STM[Nothing, PriorityQueue[A]] =
+      for {
+        minLevel <- TRef.make(Option.empty[Int])
+        map <- TMap.empty[Int, TQueue[A]]
+      } yield new PriorityQueue[A](minLevel, map)
   }
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
