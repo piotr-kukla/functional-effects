@@ -468,6 +468,7 @@ object StmPriorityQueue extends App {
         emptyQueue <- TQueue.unbounded[A]
         queue <- map.getOrElse(priority, emptyQueue)
         _     <- queue.offer(a)
+        _     <- map.put(priority, queue)
         _     <- minLevel.update {
                   case None => Some(priority)
                   case Some(oldMinLevel) => Some(min(priority, oldMinLevel))
@@ -479,8 +480,11 @@ object StmPriorityQueue extends App {
       result <- for {
                 queue <- map.get(minPrio).map(_.get)
                 elem  <- queue.take
+                isEmpty <- queue.isEmpty
+                _     <- if (isEmpty) map.delete(minPrio) else STM.succeed(())
             } yield elem
-      //TODO wyliczyc nowe minPrio (byc moze None gdy pusta kolejka)
+      keys   <- map.keys
+      _      <- minLevel.set( if (keys.isEmpty) None else Some(keys.min))
     } yield result
   }
   object PriorityQueue {
